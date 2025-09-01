@@ -31,7 +31,7 @@ export default function Home() {
               Create Personalized Bedtime Adventures
             </h2>
             <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed">
-              Transform your child's name into the hero of their own magical story. 
+              Transform your child&apos;s name into the hero of their own magical story. 
               Each tale is crafted with love, featuring beautiful illustrations and 
               heartwarming lessons that make bedtime special.
             </p>
@@ -81,7 +81,7 @@ export default function Home() {
             <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 text-center shadow-lg">
               <div className="text-4xl mb-4">2️⃣</div>
               <h4 className="font-semibold text-gray-800 mb-3">Select Art Style</h4>
-              <p className="text-gray-600">Choose from watercolor, cartoon, or classic children's book styles</p>
+              <p className="text-gray-600">Choose from watercolor, cartoon, or classic children&apos;s book styles</p>
             </div>
             <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 text-center shadow-lg">
               <div className="text-4xl mb-4">3️⃣</div>

@@ -40,12 +40,12 @@ export async function POST(req: NextRequest) {
     const imageW = pageWidth - margin * 2;
     const imageH = pageHeight - margin * 2 - 110; // room for text panel
 
-    const url = (p as any)?.imageUrl as string | undefined;
+    const url = (p as { imageUrl?: string })?.imageUrl;
     if (url) {
       try {
         if (url.startsWith("data:image/png;base64,") || url.startsWith("data:image/jpeg;base64,")) {
           // draw from base64
-          drawImageFromDataUrl(doc as any, url, imageX, imageY, imageW, imageH);
+          drawImageFromDataUrl(doc, url, imageX, imageY, imageW, imageH);
         } else if (url.startsWith("data:image/svg+xml;")) {
           // Handle SVG data URLs (mock images)
           const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${imageW}' height='${imageH}'>
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
             <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='24' font-family='sans-serif' fill='#6b7280'>Mock Image</text>
           </svg>`;
           const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-          drawImageFromDataUrl(doc as any, dataUrl, imageX, imageY, imageW, imageH);
+          drawImageFromDataUrl(doc, dataUrl, imageX, imageY, imageW, imageH);
         } else if (url.startsWith("http")) {
           // Fetch remote image and convert to buffer
           const response = await fetch(url);
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
         console.error(`Failed to embed image for page ${i + 1}:`, error);
         // Draw a placeholder rectangle
         doc.rect(imageX, imageY, imageW, imageH).fill("#f3f4f6");
-        doc.fontSize(12).fillColor("#6b7280").text("Image failed to load", imageX + imageW/2, imageY + imageH/2, { align: "center", valign: "middle" });
+        doc.fontSize(12).fillColor("#6b7280").text("Image failed to load", imageX + imageW/2, imageY + imageH/2, { align: "center" });
         doc.fillColor("#000000");
       }
     }

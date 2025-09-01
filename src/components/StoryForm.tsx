@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { Story } from "@/lib/schema";
 
@@ -47,7 +47,6 @@ export default function StoryForm() {
   const [error, setError] = useState<string | null>(null);
   const [images, setImages] = useState<string[] | null>(null);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
-  const [imagesGenerated, setImagesGenerated] = useState(0);
   const selectedStyle = watch("illustrationStyle");
   const currentTopic = watch("topic");
 
@@ -70,7 +69,6 @@ export default function StoryForm() {
       // Kick off image generation
       setIsGeneratingImages(true);
       setImages(null);
-      setImagesGenerated(0);
       const imgRes = await fetch("/api/generate/images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
