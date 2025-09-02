@@ -8,109 +8,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Google AI API client for image generation using Gemini 2.5 Flash
-async function generateWithGoogleAI(prompt: string): Promise<string> {
-  try {
-    console.log("Attempting Google AI image generation with prompt:", prompt);
-    
-    // Get environment variables
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error("Google AI API key not found in environment variables");
-    }
-    
-    console.log("Using Google AI API key:", apiKey ? "Found" : "Missing");
-    
-    // Try the direct Gemini API first (simpler approach)
-    console.log("Trying direct Gemini API...");
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
-      method: 'POST',
-      headers: {
-        'x-goog-api-key': apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: `Generate a children's book illustration: ${prompt}. Return the image as base64 data.`
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 2048,
-        }
-      })
-    });
-    
-    console.log("Gemini API response status:", geminiResponse.status);
-    
-    if (geminiResponse.ok) {
-      const geminiData = await geminiResponse.json();
-      console.log("Gemini API response data:", JSON.stringify(geminiData, null, 2));
-      
-      // Check for image data in the response
-      const candidates = geminiData.candidates;
-      if (candidates && candidates.length > 0) {
-        const parts = candidates[0].content?.parts;
-        if (parts && parts.length > 0) {
-          const part = parts[0];
-          
-          // Check if it's an inline data image
-          if (part.inlineData && part.inlineData.mimeType && part.inlineData.data) {
-            const mimeType = part.inlineData.mimeType;
-            const base64Data = part.inlineData.data;
-            return `data:${mimeType};base64,${base64Data}`;
-          }
-          
-          // Check if it's a text response with JSON containing base64 data
-          if (part.text) {
-            console.log("Processing text response:", part.text.substring(0, 200) + "...");
-            
-            // Try to extract JSON from the response
-            try {
-              // Look for JSON content between ```json and ```
-              const jsonMatch = part.text.match(/```json\s*(\{[\s\S]*?\})\s*```/);
-              if (jsonMatch) {
-                const jsonData = JSON.parse(jsonMatch[1]);
-                console.log("Extracted JSON keys:", Object.keys(jsonData));
-                
-                // Check for different possible base64 field names
-                const base64Data = jsonData.b64_json || jsonData.image_base64 || jsonData.base64 || jsonData.data;
-                if (base64Data) {
-                  console.log("Found base64 data, length:", base64Data.length);
-                  return `data:image/png;base64,${base64Data}`;
-                }
-              }
-            } catch (jsonError) {
-              console.log("JSON parsing failed:", jsonError);
-            }
-            
-            // Fallback: check if it's a direct data URL
-            if (part.text.includes('data:image') || part.text.includes('base64')) {
-              return part.text;
-            }
-          }
-        }
-      }
-    } else {
-      const errorText = await geminiResponse.text();
-      console.error("Gemini API error:", errorText);
-    }
-    
-    throw new Error("No image data received from Google AI");
-    
-  } catch (error) {
-    console.error("Google AI generation failed:", error);
-    throw error; // Re-throw to trigger OpenAI fallback
-  }
-}
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -143,26 +41,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(imagesResponseSchema.parse({ images: mockImages }));
     }
 
-    // Choose image generation model based on request or environment variable
-    const requestModel = input.aiModel;
-    const imageModel = requestModel || process.env.IMAGE_MODEL || "openai-dalle3"; // Default to OpenAI
-    const useGoogleAI = imageModel === "google-nano-banana";
-    
-    console.log(`Using image generation model: ${imageModel} (requested: ${requestModel})`);
+    // Currently using OpenAI DALL-E 3 as primary image generation model
+    console.log(`Using image generation model: OpenAI DALL-E 3 (requested: ${input.aiModel})`);
     console.log("Environment variables:", {
       OPENAI_API_KEY: process.env.OPENAI_API_KEY ? "SET" : "MISSING",
-      GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY ? "SET" : "MISSING",
-      GEMINI_API_KEY: process.env.GEMINI_API_KEY ? "SET" : "MISSING",
       MOCK_IMAGES: process.env.MOCK_IMAGES
-    });
-    
-    // Check which Google AI key is actually being used
-    const googleApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY;
-    console.log("Google AI API key status:", {
-      GEMINI_API_KEY: process.env.GEMINI_API_KEY ? "SET" : "MISSING",
-      GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY ? "SET" : "MISSING", 
-      GOOGLE_API_KEY: process.env.GOOGLE_API_KEY ? "SET" : "MISSING",
-      FINAL_KEY: googleApiKey ? "FOUND" : "MISSING"
     });
     
     // Real image generation
@@ -186,53 +69,21 @@ export async function POST(req: NextRequest) {
       try {
         let imageUrl: string;
         
-        if (useGoogleAI) {
-          // Try Google AI first, fallback to OpenAI if it fails
-          try {
-            console.log(`Attempting Google AI for page ${i + 1}...`);
-            imageUrl = await generateWithGoogleAI(prompt);
-            console.log(`✅ Google AI generated image for page ${i + 1}:`, imageUrl.substring(0, 100) + "...");
-          } catch (googleError) {
-            console.log(`❌ Google AI failed for page ${i + 1}, falling back to OpenAI:`, googleError);
-            // Fallback to OpenAI
-            console.log(`Attempting OpenAI fallback for page ${i + 1}...`);
-            try {
-              const response = await openai.images.generate({
-                model: "dall-e-3",
-                prompt,
-                n: 1,
-                size: "1024x1024",
-                response_format: "url",
-              });
+        // Use OpenAI DALL-E 3 for image generation
+        console.log(`Attempting OpenAI for page ${i + 1}...`);
+        const response = await openai.images.generate({
+          model: "dall-e-3",
+          prompt,
+          n: 1,
+          size: "1024x1024",
+          response_format: "url",
+        });
 
-              if (response.data && response.data[0]?.url) {
-                imageUrl = response.data[0].url;
-                console.log(`✅ OpenAI fallback generated image for page ${i + 1}:`, imageUrl.substring(0, 100) + "...");
-              } else {
-                throw new Error("No image URL returned from OpenAI fallback");
-              }
-            } catch (openaiError) {
-              console.error(`❌ OpenAI fallback also failed for page ${i + 1}:`, openaiError);
-              throw openaiError; // Re-throw to trigger placeholder
-            }
-          }
+        if (response.data && response.data[0]?.url) {
+          imageUrl = response.data[0].url;
+          console.log(`✅ OpenAI generated image for page ${i + 1}:`, imageUrl.substring(0, 100) + "...");
         } else {
-          // Use OpenAI DALL-E 3 (default)
-          console.log(`Attempting OpenAI for page ${i + 1}...`);
-          const response = await openai.images.generate({
-            model: "dall-e-3",
-            prompt,
-            n: 1,
-            size: "1024x1024",
-            response_format: "url",
-          });
-
-          if (response.data && response.data[0]?.url) {
-            imageUrl = response.data[0].url;
-            console.log(`✅ OpenAI generated image for page ${i + 1}:`, imageUrl.substring(0, 100) + "...");
-          } else {
-            throw new Error("No image URL returned");
-          }
+          throw new Error("No image URL returned");
         }
         
         images.push(imageUrl);

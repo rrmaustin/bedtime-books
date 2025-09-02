@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bedtime Books 📚✨
 
-## Getting Started
+A magical AI-powered children's book generator that creates personalized bedtime stories with beautiful illustrations.
 
-First, run the development server:
+## ✨ Features
 
+- **Personalized Stories**: Create stories featuring your child as the main character
+- **AI-Generated Illustrations**: Beautiful, consistent artwork using OpenAI DALL-E 3
+- **PDF Export**: Download complete storybooks as PDFs
+- **Multiple Art Styles**: Choose from 7 different illustration styles
+- **Topic Suggestions**: Quick-start with popular themes like kindness, friendship, and adventure
+- **Age-Appropriate Content**: Tailored for children ages 3-10
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- OpenAI API key
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/rrmaustin/bedtime-books.git
+cd bedtime-books
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Add your OpenAI API key to `.env.local`:
+```
+OPENAI_API_KEY=your_openai_api_key_here
+```
 
-## Learn More
+4. Run the development server:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🎨 How It Works
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Story Generation**: Enter your child's details and choose a topic
+2. **AI Story Creation**: GPT-4 generates a personalized story with 8-12 pages
+3. **Image Generation**: DALL-E 3 creates consistent illustrations for each page
+4. **PDF Export**: Download the complete storybook as a beautiful PDF
 
-## Deploy on Vercel
+## 🛠️ Tech Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **AI**: OpenAI GPT-4 (story generation), DALL-E 3 (illustrations)
+- **PDF Generation**: PDFKit
+- **Form Handling**: React Hook Form
+- **Validation**: Zod
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📝 Environment Variables
+
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+MOCK_IMAGES=false  # Set to true for development/testing
+```
+
+## 🚀 Deployment
+
+The app is optimized for deployment on Vercel:
+
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Add your environment variables in the Vercel dashboard
+4. Deploy!
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+Made with ❤️ for bedtime stories everywhere
