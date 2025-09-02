@@ -16,7 +16,7 @@ const STYLE_OPTIONS = [
 
 const AI_MODEL_OPTIONS = [
   { value: "openai-dalle3", label: "OpenAI DALL-E 3", description: "High quality, detailed images" },
-  { value: "google-nano-banana", label: "Google Nano Banana", description: "Fast, cost-effective images (placeholder)" },
+  { value: "google-nano-banana", label: "Google Nano Banana", description: "Fast, cost-effective images" },
 ] as const;
 
 const TOPIC_SUGGESTIONS = [
@@ -224,12 +224,11 @@ export default function StoryForm() {
           <input type="hidden" {...register("aiModel", { required: true })} />
           
           {selectedModel === "google-nano-banana" && (
-            <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center">
-                <span className="text-yellow-600 mr-2">⚠️</span>
-                <div className="text-sm text-yellow-800">
-                  <strong>Note:</strong> Google AI image generation is currently in development. 
-                  You&apos;ll see placeholder images for now. Use OpenAI DALL-E 3 for full functionality.
+                <span className="text-blue-600 mr-2">🚀</span>
+                <div className="text-sm text-blue-800">
+                  <strong>Google Nano Banana:</strong> Fast image generation with Gemini 2.5 Flash Image model.
                 </div>
               </div>
             </div>

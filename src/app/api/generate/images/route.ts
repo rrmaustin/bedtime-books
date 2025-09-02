@@ -8,42 +8,70 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Google AI API client for image generation
+// Google AI API client for image generation using Gemini 2.5 Flash Image (Nano Banana)
 async function generateWithGoogleAI(prompt: string): Promise<string> {
   try {
-    // Try to use Google AI for image generation
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    // Use the new Google GenAI SDK
+    const { GoogleGenAI } = await import('@google/genai');
     
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '');
+    // Initialize the client with API key from environment
+    const ai = new GoogleGenAI({});
     
-    // Try different approaches for Google AI image generation
-    try {
-      // Approach 1: Try Gemini Pro Vision (if available)
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-      
-      const result = await model.generateContent([
-        {
-          text: `Create a children's book illustration based on this description: ${prompt}. Return only the image data.`,
+    // Use Gemini 2.5 Flash model for image generation
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Generate a children's book illustration: ${prompt}`,
+      config: {
+        thinkingConfig: {
+          thinkingBudget: 0, // Disable thinking for faster response
         },
-      ]);
-      
-      const response = await result.response;
-      const text = response.text();
-      
-      // Check if we got image data
-      if (text.includes('data:image') || text.includes('base64')) {
-        return text;
       }
-      
-      throw new Error("No image data in response");
-      
-    } catch {
-      console.log("Gemini Pro approach failed, trying alternative...");
-      
-      // Approach 2: Use text-to-image if available
-      // Note: This might not work with current Google AI API
-      throw new Error("Google AI image generation not yet fully supported");
+    });
+    
+    // Extract the response text
+    const result = response.text;
+    
+    // Check if we got image data
+    if (result && (result.includes('data:image') || result.includes('base64'))) {
+      return result;
     }
+    
+    // If no image data, try to generate an image using the REST API directly
+    // This is a fallback approach for image generation
+    const imageResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: `Create a children's book illustration: ${prompt}`
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          thinkingConfig: {
+            thinkingBudget: 0
+          }
+        }
+      })
+    });
+    
+    if (imageResponse.ok) {
+      const imageData = await imageResponse.json();
+      const content = imageData.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (content && (content.includes('data:image') || content.includes('base64'))) {
+        return content;
+      }
+    }
+    
+    throw new Error("No image data received from Google AI");
     
   } catch (error) {
     console.error("Google AI generation failed:", error);
