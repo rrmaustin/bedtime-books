@@ -156,6 +156,15 @@ export async function POST(req: NextRequest) {
       MOCK_IMAGES: process.env.MOCK_IMAGES
     });
     
+    // Check which Google AI key is actually being used
+    const googleApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY;
+    console.log("Google AI API key status:", {
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY ? "SET" : "MISSING",
+      GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY ? "SET" : "MISSING", 
+      GOOGLE_API_KEY: process.env.GOOGLE_API_KEY ? "SET" : "MISSING",
+      FINAL_KEY: googleApiKey ? "FOUND" : "MISSING"
+    });
+    
     // Real image generation
     const images: string[] = [];
     
