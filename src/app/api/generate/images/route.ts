@@ -8,6 +8,45 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Google AI API client for Gemini 2.5 Flash Image (Nano Banana) model
+async function generateWithGoogleAI(prompt: string): Promise<string> {
+  try {
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '');
+    
+    // Use the correct model name for Gemini 2.5 Flash Image (Nano Banana)
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    
+    // Create the image generation request
+    const result = await model.generateContent([
+      {
+        text: `Generate a children's book illustration: ${prompt}`,
+      },
+    ]);
+    
+    const response = await result.response;
+    
+    // Handle the response - Google AI typically returns base64 encoded images
+    const imageData = response.text();
+    
+    // If it's already a data URL, return it
+    if (imageData.startsWith('data:')) {
+      return imageData;
+    }
+    
+    // If it's base64 without the data URL prefix, add it
+    if (imageData && !imageData.startsWith('data:')) {
+      return `data:image/png;base64,${imageData}`;
+    }
+    
+    throw new Error("Invalid image data received from Google AI");
+  } catch (error) {
+    console.error("Google AI generation failed:", error);
+    throw error;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const input = imagesRequestSchema.parse(await req.json());
@@ -30,7 +69,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(imagesResponseSchema.parse({ images: mockImages }));
     }
 
-    // Real image generation (OpenAI DALL-E 3)
+    // Choose image generation model based on request or environment variable
+    const requestModel = input.aiModel;
+    const imageModel = requestModel || process.env.IMAGE_MODEL || "openai-dalle3"; // Default to OpenAI
+    const useGoogleAI = imageModel === "google-nano-banana";
+    
+    console.log(`Using image generation model: ${imageModel} (requested: ${requestModel})`);
+    
+    // Real image generation
     const images: string[] = [];
     
     // Create a consistent character description with specific details
@@ -45,19 +91,29 @@ export async function POST(req: NextRequest) {
       const prompt = `${artStyleDescription}, ${characterDescription}, scene: ${imagePrompt}, no sleeping children in beds unless specifically mentioned in the story text, focus on the main character's actions and emotions`;
       
       try {
-        const response = await openai.images.generate({
-          model: "dall-e-3",
-          prompt,
-          n: 1,
-          size: "1024x1024",
-          response_format: "url",
-        });
-
-        if (response.data && response.data[0]?.url) {
-          images.push(response.data[0].url);
+        let imageUrl: string;
+        
+        if (useGoogleAI) {
+          // Use Google Nano Banana
+          imageUrl = await generateWithGoogleAI(prompt);
         } else {
-          throw new Error("No image URL returned");
+          // Use OpenAI DALL-E 3 (default)
+          const response = await openai.images.generate({
+            model: "dall-e-3",
+            prompt,
+            n: 1,
+            size: "1024x1024",
+            response_format: "url",
+          });
+
+          if (response.data && response.data[0]?.url) {
+            imageUrl = response.data[0].url;
+          } else {
+            throw new Error("No image URL returned");
+          }
         }
+        
+        images.push(imageUrl);
       } catch (error) {
         console.error(`Failed to generate image for page ${i + 1}:`, error);
         // Return a placeholder image if generation fails

@@ -25,7 +25,11 @@ export async function POST(req: NextRequest) {
 
   for (let i = 0; i < (pages || []).length; i++) {
     const p = pages[i];
-    if (i > 0) doc.addPage();
+    
+    // Add new page for all pages except the first
+    if (i > 0) {
+      doc.addPage();
+    }
     
     // Add title on first page only
     if (i === 0) {
@@ -36,9 +40,9 @@ export async function POST(req: NextRequest) {
     const pageHeight = doc.page.height;
     const margin = 36;
     const imageX = margin;
-    const imageY = margin;
+    const imageY = i === 0 ? margin + 60 : margin; // Extra space for title on first page
     const imageW = pageWidth - margin * 2;
-    const imageH = pageHeight - margin * 2 - 110; // room for text panel
+    const imageH = pageHeight - margin * 2 - 120; // More room for text panel
 
     const url = (p as { imageUrl?: string })?.imageUrl;
     if (url) {
@@ -77,13 +81,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Text panel overlay
+    // Text panel overlay - improved formatting
     const panelX = margin;
     const panelY = imageY + imageH + 16;
     const panelW = imageW;
-    const panelH = 90;
-    doc.roundedRect(panelX, panelY, panelW, panelH, 8).fillOpacity(0.06).fillAndStroke("#000000", "#e5e7eb").fillOpacity(1);
-    doc.text(p?.text || "", panelX + 12, panelY + 12, { width: panelW - 24, align: "left" });
+    const panelH = 100; // Slightly larger panel
+    
+    // Background panel
+    doc.roundedRect(panelX, panelY, panelW, panelH, 8).fillOpacity(0.95).fillAndStroke("#ffffff", "#e5e7eb").fillOpacity(1);
+    
+    // Text with better formatting
+    const text = p?.text || "";
+    doc.fontSize(14).fillColor("#374151").text(text, panelX + 16, panelY + 16, { 
+      width: panelW - 32, 
+      align: "left",
+      lineGap: 2,
+      ellipsis: false // Prevent text from being cut off
+    });
 
     // Page number
     doc.fontSize(10).fillColor("#6b7280").text(`${i + 1}`, pageWidth - margin - 12, pageHeight - margin - 10);

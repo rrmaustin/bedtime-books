@@ -27,6 +27,7 @@ export const imagesRequestSchema = z.object({
   story: storySchema,
   illustrationStyle: z.string().min(2),
   childName: z.string().min(1).optional(),
+  aiModel: z.string().optional(),
 });
 
 export const imagesResponseSchema = z.object({

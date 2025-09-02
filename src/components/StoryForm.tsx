@@ -14,6 +14,11 @@ const STYLE_OPTIONS = [
   "bright marker cartoon",
 ] as const;
 
+const AI_MODEL_OPTIONS = [
+  { value: "openai-dalle3", label: "OpenAI DALL-E 3", description: "High quality, detailed images" },
+  { value: "google-nano-banana", label: "Google Nano Banana", description: "Fast, cost-effective images" },
+] as const;
+
 const TOPIC_SUGGESTIONS = [
   "kindness at school",
   "making new friends",
@@ -32,6 +37,7 @@ const TOPIC_SUGGESTIONS = [
   minutes: number;
   topic: string;
   illustrationStyle: (typeof STYLE_OPTIONS)[number];
+  aiModel: (typeof AI_MODEL_OPTIONS)[number]["value"];
  };
 
 export default function StoryForm() {
@@ -41,6 +47,7 @@ export default function StoryForm() {
       minutes: 6,
       age: 5,
       illustrationStyle: "warm watercolor",
+      aiModel: "openai-dalle3",
     },
   });
   const [story, setStory] = useState<Story | null>(null);
@@ -49,6 +56,7 @@ export default function StoryForm() {
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const selectedStyle = watch("illustrationStyle");
   const currentTopic = watch("topic");
+  const selectedModel = watch("aiModel");
 
   const onSubmit = async (data: FormInput) => {
     setError(null);
@@ -72,7 +80,12 @@ export default function StoryForm() {
       const imgRes = await fetch("/api/generate/images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ story: json, illustrationStyle: watch("illustrationStyle"), childName: watch("childName") }),
+        body: JSON.stringify({ 
+          story: json, 
+          illustrationStyle: watch("illustrationStyle"), 
+          childName: watch("childName"),
+          aiModel: watch("aiModel")
+        }),
       });
       if (imgRes.ok) {
         const data = (await imgRes.json()) as { images: string[] };
@@ -181,6 +194,34 @@ export default function StoryForm() {
             })}
           </div>
           <input type="hidden" {...register("illustrationStyle", { required: true })} />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-900">AI Image Model</label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {AI_MODEL_OPTIONS.map((model) => {
+              const selected = selectedModel === model.value;
+              return (
+                <button
+                  key={model.value}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setValue("aiModel", model.value, { shouldDirty: true })}
+                  className={`px-3 py-1.5 rounded-full border transition-colors ${
+                    selected
+                      ? "bg-green-600 border-green-600 text-white"
+                      : "bg-white border-gray-300 text-gray-900 hover:border-green-400"
+                  }`}
+                >
+                  <div className="text-left">
+                    <div className="font-medium">{model.label}</div>
+                    <div className="text-xs opacity-75">{model.description}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <input type="hidden" {...register("aiModel", { required: true })} />
         </div>
 
         <div className="md:col-span-2 flex gap-3 mt-2">
