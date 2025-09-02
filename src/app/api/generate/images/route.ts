@@ -15,65 +15,14 @@ async function generateWithGoogleAI(prompt: string): Promise<string> {
     
     // Get environment variables
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY;
-    const projectId = process.env.GCP_PROJECT_ID;
-    const location = process.env.GCP_LOCATION || "us-central1";
     
     if (!apiKey) {
       throw new Error("Google AI API key not found in environment variables");
     }
     
-    console.log("Using API key:", apiKey ? "Found" : "Missing");
-    console.log("Project ID:", projectId || "Not set");
-    console.log("Location:", location);
+    console.log("Using Google AI API key:", apiKey ? "Found" : "Missing");
     
-    // Try the Vertex AI endpoint first (if project ID is available)
-    if (projectId) {
-      console.log("Trying Vertex AI endpoint...");
-      const vertexEndpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.5-flash:predict?key=${apiKey}`;
-      
-      const vertexResponse = await fetch(vertexEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          instances: [
-            {
-              prompt: `Create a beautiful children's book illustration: ${prompt}. Style: warm, colorful, child-friendly, bedtime story illustration.`
-            }
-          ],
-          parameters: {
-            num_images: 1,
-            height: 1024,
-            width: 1024,
-            seed: Math.floor(Math.random() * 1000),
-          }
-        })
-      });
-      
-      console.log("Vertex AI response status:", vertexResponse.status);
-      
-      if (vertexResponse.ok) {
-        const vertexData = await vertexResponse.json();
-        console.log("Vertex AI response data:", JSON.stringify(vertexData, null, 2));
-        
-        // Extract image data from Vertex AI response
-        if (vertexData.predictions && vertexData.predictions.length > 0) {
-          const prediction = vertexData.predictions[0];
-          if (prediction.image_url) {
-            return prediction.image_url;
-          }
-          if (prediction.image_data) {
-            return `data:image/png;base64,${prediction.image_data}`;
-          }
-        }
-      } else {
-        const errorText = await vertexResponse.text();
-        console.error("Vertex AI API error:", errorText);
-      }
-    }
-    
-    // Fallback to direct Gemini API
+    // Try the direct Gemini API first (simpler approach)
     console.log("Trying direct Gemini API...");
     const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
       method: 'POST',
@@ -135,20 +84,7 @@ async function generateWithGoogleAI(prompt: string): Promise<string> {
     
   } catch (error) {
     console.error("Google AI generation failed:", error);
-    
-    // Fallback to a nice placeholder with better messaging
-    const placeholderSvg = `data:image/svg+xml;utf8,${encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
-        <rect width="100%" height="100%" fill="#f0f9ff"/>
-        <circle cx="200" cy="150" r="80" fill="#3b82f6" opacity="0.2"/>
-        <text x="200" y="140" text-anchor="middle" font-family="Arial" font-size="14" fill="#1e40af">Google AI</text>
-        <text x="200" y="160" text-anchor="middle" font-family="Arial" font-size="12" fill="#374151">Image Generation</text>
-        <text x="200" y="180" text-anchor="middle" font-family="Arial" font-size="10" fill="#6b7280">API Issue</text>
-        <text x="200" y="200" text-anchor="middle" font-family="Arial" font-size="8" fill="#9ca3af">Check logs</text>
-      </svg>
-    `)}`;
-    
-    return placeholderSvg;
+    throw error; // Re-throw to trigger OpenAI fallback
   }
 }
 
@@ -199,8 +135,27 @@ export async function POST(req: NextRequest) {
         let imageUrl: string;
         
         if (useGoogleAI) {
-          // Use Google Nano Banana
-          imageUrl = await generateWithGoogleAI(prompt);
+          // Try Google AI first, fallback to OpenAI if it fails
+          try {
+            imageUrl = await generateWithGoogleAI(prompt);
+            console.log(`Google AI generated image for page ${i + 1}`);
+          } catch (googleError) {
+            console.log(`Google AI failed for page ${i + 1}, falling back to OpenAI:`, googleError);
+            // Fallback to OpenAI
+            const response = await openai.images.generate({
+              model: "dall-e-3",
+              prompt,
+              n: 1,
+              size: "1024x1024",
+              response_format: "url",
+            });
+
+            if (response.data && response.data[0]?.url) {
+              imageUrl = response.data[0].url;
+            } else {
+              throw new Error("No image URL returned from OpenAI fallback");
+            }
+          }
         } else {
           // Use OpenAI DALL-E 3 (default)
           const response = await openai.images.generate({
