@@ -8,37 +8,13 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Google AI API client for image generation using Gemini 2.5 Flash Image (Nano Banana)
+// Google AI API client for image generation using Imagen
 async function generateWithGoogleAI(prompt: string): Promise<string> {
   try {
-    // Use the new Google GenAI SDK
-    const { GoogleGenAI } = await import('@google/genai');
+    console.log("Attempting Google AI image generation with prompt:", prompt);
     
-    // Initialize the client with API key from environment
-    const ai = new GoogleGenAI({});
-    
-    // Use Gemini 2.5 Flash model for image generation
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Generate a children's book illustration: ${prompt}`,
-      config: {
-        thinkingConfig: {
-          thinkingBudget: 0, // Disable thinking for faster response
-        },
-      }
-    });
-    
-    // Extract the response text
-    const result = response.text;
-    
-    // Check if we got image data
-    if (result && (result.includes('data:image') || result.includes('base64'))) {
-      return result;
-    }
-    
-    // If no image data, try to generate an image using the REST API directly
-    // This is a fallback approach for image generation
-    const imageResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+    // Use Google's Imagen model for actual image generation
+    const imageResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0:generateContent', {
       method: 'POST',
       headers: {
         'x-goog-api-key': process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '',
@@ -49,22 +25,75 @@ async function generateWithGoogleAI(prompt: string): Promise<string> {
           {
             parts: [
               {
-                text: `Create a children's book illustration: ${prompt}`
+                text: `Create a beautiful children's book illustration: ${prompt}. Style: warm, colorful, child-friendly, bedtime story illustration.`
               }
             ]
           }
         ],
         generationConfig: {
-          thinkingConfig: {
-            thinkingBudget: 0
-          }
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048,
         }
       })
     });
     
+    console.log("Google AI response status:", imageResponse.status);
+    
     if (imageResponse.ok) {
       const imageData = await imageResponse.json();
-      const content = imageData.candidates?.[0]?.content?.parts?.[0]?.text;
+      console.log("Google AI response data:", JSON.stringify(imageData, null, 2));
+      
+      // Check for image data in the response
+      const candidates = imageData.candidates;
+      if (candidates && candidates.length > 0) {
+        const parts = candidates[0].content?.parts;
+        if (parts && parts.length > 0) {
+          const part = parts[0];
+          
+          // Check if it's an inline data image
+          if (part.inlineData && part.inlineData.mimeType && part.inlineData.data) {
+            const mimeType = part.inlineData.mimeType;
+            const base64Data = part.inlineData.data;
+            return `data:${mimeType};base64,${base64Data}`;
+          }
+          
+          // Check if it's a text response with image data
+          if (part.text && (part.text.includes('data:image') || part.text.includes('base64'))) {
+            return part.text;
+          }
+        }
+      }
+    } else {
+      const errorText = await imageResponse.text();
+      console.error("Google AI API error:", errorText);
+    }
+    
+    // If Imagen doesn't work, try Gemini with a different approach
+    console.log("Trying Gemini text-to-image approach...");
+    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent', {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: `Generate a children's book illustration as a base64 encoded image: ${prompt}`
+              }
+            ]
+          }
+        ]
+      })
+    });
+    
+    if (geminiResponse.ok) {
+      const geminiData = await geminiResponse.json();
+      const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
       
       if (content && (content.includes('data:image') || content.includes('base64'))) {
         return content;
@@ -76,15 +105,15 @@ async function generateWithGoogleAI(prompt: string): Promise<string> {
   } catch (error) {
     console.error("Google AI generation failed:", error);
     
-    // Fallback to a nice placeholder
+    // Fallback to a nice placeholder with better messaging
     const placeholderSvg = `data:image/svg+xml;utf8,${encodeURIComponent(`
       <svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
         <rect width="100%" height="100%" fill="#f0f9ff"/>
         <circle cx="200" cy="150" r="80" fill="#3b82f6" opacity="0.2"/>
         <text x="200" y="140" text-anchor="middle" font-family="Arial" font-size="14" fill="#1e40af">Google AI</text>
         <text x="200" y="160" text-anchor="middle" font-family="Arial" font-size="12" fill="#374151">Image Generation</text>
-        <text x="200" y="180" text-anchor="middle" font-family="Arial" font-size="10" fill="#6b7280">Coming Soon</text>
-        <text x="200" y="200" text-anchor="middle" font-family="Arial" font-size="8" fill="#9ca3af">Use OpenAI for now</text>
+        <text x="200" y="180" text-anchor="middle" font-family="Arial" font-size="10" fill="#6b7280">API Issue</text>
+        <text x="200" y="200" text-anchor="middle" font-family="Arial" font-size="8" fill="#9ca3af">Check logs</text>
       </svg>
     `)}`;
     
