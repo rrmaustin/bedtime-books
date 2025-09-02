@@ -128,15 +128,27 @@ export default function StoryForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-900">Child name</label>
-          <input className="mt-1 w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" {...register("childName", { required: true })} />
+          <input 
+            className="mt-1 w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded px-3 py-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400" 
+            {...register("childName", { required: true })} 
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900">Age</label>
-          <input type="number" min={3} max={10} className="mt-1 w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" {...register("age", { valueAsNumber: true })} />
+          <input 
+            type="number" 
+            min={3} 
+            max={10} 
+            className="mt-1 w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded px-3 py-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400" 
+            {...register("age", { valueAsNumber: true })} 
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900">Pronouns</label>
-          <select className="mt-1 w-full border border-gray-300 bg-white text-gray-900 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" {...register("pronouns")}> 
+          <select 
+            className="mt-1 w-full border border-gray-300 bg-white text-gray-900 rounded px-3 py-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 cursor-pointer" 
+            {...register("pronouns")}
+          > 
             <option value="she/her">she/her</option>
             <option value="he/him">he/him</option>
             <option value="they/them">they/them</option>
@@ -144,11 +156,21 @@ export default function StoryForm() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900">Reading minutes</label>
-          <input type="number" min={3} max={12} className="mt-1 w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" {...register("minutes", { valueAsNumber: true })} />
+          <input 
+            type="number" 
+            min={3} 
+            max={12} 
+            className="mt-1 w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded px-3 py-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400" 
+            {...register("minutes", { valueAsNumber: true })} 
+          />
         </div>
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-900">Topic (theme, moral, or subject)</label>
-          <input className="mt-1 w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., kindness at school, learning from mistakes, space adventure" {...register("topic", { required: true })} />
+          <input 
+            className="mt-1 w-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded px-3 py-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400" 
+            placeholder="e.g., kindness at school, learning from mistakes, space adventure" 
+            {...register("topic", { required: true })} 
+          />
           <div className="mt-2 flex flex-wrap gap-2">
             {TOPIC_SUGGESTIONS.map((topic) => {
               const selected = (currentTopic || "").toLowerCase() === topic.toLowerCase();
@@ -158,10 +180,10 @@ export default function StoryForm() {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => setValue("topic", topic, { shouldDirty: true, shouldTouch: true })}
-                  className={`px-3 py-1.5 rounded-full border transition-colors ${
+                  className={`px-3 py-1.5 rounded-full border transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                     selected
-                      ? "bg-blue-600 border-blue-600 text-white"
-                      : "bg-white border-gray-300 text-gray-900 hover:border-blue-400"
+                      ? "bg-blue-600 border-blue-600 text-white shadow-md"
+                      : "bg-white border-gray-300 text-gray-900 hover:border-blue-400 hover:bg-blue-50 active:bg-blue-100 active:scale-95"
                   }`}
                 >
                   {topic}
@@ -181,10 +203,10 @@ export default function StoryForm() {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => setValue("illustrationStyle", style, { shouldDirty: true })}
-                  className={`px-3 py-1.5 rounded-full border transition-colors ${
+                  className={`px-3 py-1.5 rounded-full border transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
                     selected
-                      ? "bg-purple-600 border-purple-600 text-white"
-                      : "bg-white border-gray-300 text-gray-900 hover:border-purple-400"
+                      ? "bg-purple-600 border-purple-600 text-white shadow-md"
+                      : "bg-white border-gray-300 text-gray-900 hover:border-purple-400 hover:bg-purple-50 active:bg-purple-100 active:scale-95"
                   }`}
                 >
                   {style}
@@ -206,10 +228,10 @@ export default function StoryForm() {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => setValue("aiModel", model.value, { shouldDirty: true })}
-                  className={`px-3 py-1.5 rounded-full border transition-colors ${
+                  className={`px-3 py-1.5 rounded-full border transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
                     selected
-                      ? "bg-green-600 border-green-600 text-white"
-                      : "bg-white border-gray-300 text-gray-900 hover:border-green-400"
+                      ? "bg-green-600 border-green-600 text-white shadow-md"
+                      : "bg-white border-gray-300 text-gray-900 hover:border-green-400 hover:bg-green-50 active:bg-green-100 active:scale-95"
                   }`}
                 >
                   <div className="text-left">
@@ -224,11 +246,19 @@ export default function StoryForm() {
         </div>
 
         <div className="md:col-span-2 flex gap-3 mt-2">
-          <button type="submit" disabled={isSubmitting || isGeneratingImages} className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50">
+          <button 
+            type="submit" 
+            disabled={isSubmitting || isGeneratingImages} 
+            className="px-4 py-2 bg-blue-600 text-white rounded font-medium transition-all duration-200 cursor-pointer hover:bg-blue-700 active:bg-blue-800 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:active:scale-100"
+          >
             {isSubmitting ? "Generating story..." : isGeneratingImages ? "Painting pictures..." : "Generate story"}
           </button>
           {story && !isGeneratingImages && images && images.length > 0 && (
-            <button type="button" onClick={downloadPdf} className="px-4 py-2 bg-emerald-600 text-white rounded">
+            <button 
+              type="button" 
+              onClick={downloadPdf} 
+              className="px-4 py-2 bg-emerald-600 text-white rounded font-medium transition-all duration-200 cursor-pointer hover:bg-emerald-700 active:bg-emerald-800 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+            >
               Download PDF
             </button>
           )}
