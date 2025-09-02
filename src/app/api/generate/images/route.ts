@@ -90,8 +90,17 @@ async function generateWithGoogleAI(prompt: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("=== IMAGE GENERATION START ===");
     const input = imagesRequestSchema.parse(await req.json());
     const { story, illustrationStyle, childName } = input;
+    
+    console.log("Input received:", {
+      storyTitle: story.title,
+      pagesCount: story.pages?.length,
+      illustrationStyle,
+      childName,
+      aiModel: input.aiModel
+    });
 
     // Mock image generation
     if (process.env.MOCK_IMAGES === "true") {
@@ -116,6 +125,12 @@ export async function POST(req: NextRequest) {
     const useGoogleAI = imageModel === "google-nano-banana";
     
     console.log(`Using image generation model: ${imageModel} (requested: ${requestModel})`);
+    console.log("Environment variables:", {
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY ? "SET" : "MISSING",
+      GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY ? "SET" : "MISSING",
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY ? "SET" : "MISSING",
+      MOCK_IMAGES: process.env.MOCK_IMAGES
+    });
     
     // Real image generation
     const images: string[] = [];
@@ -131,17 +146,23 @@ export async function POST(req: NextRequest) {
       const imagePrompt = page.image_prompt || `page ${i + 1} of the story`;
       const prompt = `${artStyleDescription}, ${characterDescription}, scene: ${imagePrompt}, no sleeping children in beds unless specifically mentioned in the story text, focus on the main character's actions and emotions`;
       
+      console.log(`\n--- Generating image for page ${i + 1} ---`);
+      console.log("Image prompt:", imagePrompt);
+      console.log("Full prompt:", prompt);
+      
       try {
         let imageUrl: string;
         
         if (useGoogleAI) {
           // Try Google AI first, fallback to OpenAI if it fails
           try {
+            console.log(`Attempting Google AI for page ${i + 1}...`);
             imageUrl = await generateWithGoogleAI(prompt);
-            console.log(`Google AI generated image for page ${i + 1}`);
+            console.log(`✅ Google AI generated image for page ${i + 1}:`, imageUrl.substring(0, 100) + "...");
           } catch (googleError) {
-            console.log(`Google AI failed for page ${i + 1}, falling back to OpenAI:`, googleError);
+            console.log(`❌ Google AI failed for page ${i + 1}, falling back to OpenAI:`, googleError);
             // Fallback to OpenAI
+            console.log(`Attempting OpenAI fallback for page ${i + 1}...`);
             const response = await openai.images.generate({
               model: "dall-e-3",
               prompt,
@@ -152,12 +173,14 @@ export async function POST(req: NextRequest) {
 
             if (response.data && response.data[0]?.url) {
               imageUrl = response.data[0].url;
+              console.log(`✅ OpenAI fallback generated image for page ${i + 1}:`, imageUrl.substring(0, 100) + "...");
             } else {
               throw new Error("No image URL returned from OpenAI fallback");
             }
           }
         } else {
           // Use OpenAI DALL-E 3 (default)
+          console.log(`Attempting OpenAI for page ${i + 1}...`);
           const response = await openai.images.generate({
             model: "dall-e-3",
             prompt,
@@ -168,14 +191,16 @@ export async function POST(req: NextRequest) {
 
           if (response.data && response.data[0]?.url) {
             imageUrl = response.data[0].url;
+            console.log(`✅ OpenAI generated image for page ${i + 1}:`, imageUrl.substring(0, 100) + "...");
           } else {
             throw new Error("No image URL returned");
           }
         }
         
         images.push(imageUrl);
+        console.log(`✅ Successfully added image ${i + 1} to array`);
       } catch (error) {
-        console.error(`Failed to generate image for page ${i + 1}:`, error);
+        console.error(`❌ Failed to generate image for page ${i + 1}:`, error);
         // Return a placeholder image if generation fails
         const placeholderSvg = `data:image/svg+xml;utf8,${encodeURIComponent(`
           <svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
@@ -184,8 +209,13 @@ export async function POST(req: NextRequest) {
           </svg>
         `)}`;
         images.push(placeholderSvg);
+        console.log(`⚠️ Added placeholder image for page ${i + 1}`);
       }
     }
+    
+    console.log(`\n=== IMAGE GENERATION COMPLETE ===`);
+    console.log(`Generated ${images.length} images`);
+    console.log("First image preview:", images[0]?.substring(0, 100) + "...");
 
     return NextResponse.json(imagesResponseSchema.parse({ images }));
   } catch (error) {

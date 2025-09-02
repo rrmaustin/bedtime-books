@@ -17,8 +17,16 @@ function drawImageFromDataUrl(doc: PDFKit.PDFDocument, dataUrl: string, x: numbe
 }
 
 export async function POST(req: NextRequest) {
-  const input = storySchema.parse(await req.json());
-  const { title, pages } = input as Story;
+  try {
+    console.log("=== PDF GENERATION START ===");
+    const input = storySchema.parse(await req.json());
+    const { title, pages } = input as Story;
+    
+    console.log("PDF Input:", {
+      title,
+      pagesCount: pages?.length,
+      firstPageImageUrl: pages?.[0]?.imageUrl?.substring(0, 100) + "..."
+    });
 
   const doc = new PDFDocument({ size: "LETTER", margin: 36 });
   const stream = doc as unknown as NodeJS.ReadableStream;
@@ -45,6 +53,7 @@ export async function POST(req: NextRequest) {
     const imageH = pageHeight - margin * 2 - 120; // More room for text panel
 
     const url = (p as { imageUrl?: string })?.imageUrl;
+    console.log(`Processing image for page ${i + 1}:`, url?.substring(0, 100) + "...");
     if (url) {
       try {
         if (url.startsWith("data:image/png;base64,") || url.startsWith("data:image/jpeg;base64,")) {
@@ -104,13 +113,21 @@ export async function POST(req: NextRequest) {
     doc.fillColor("#000000");
   }
 
-  doc.end();
+    console.log("=== PDF GENERATION COMPLETE ===");
+    doc.end();
 
-  return new NextResponse(stream as unknown as BodyInit, {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${(title || "story").replace(/[^a-z0-9\-_.]/gi, "_")}.pdf"`,
-      "Cache-Control": "no-store",
-    },
-  });
+    return new NextResponse(stream as unknown as BodyInit, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${(title || "story").replace(/[^a-z0-9\-_.]/gi, "_")}.pdf"`,
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (error) {
+    console.error("PDF generation error:", error);
+    return NextResponse.json(
+      { error: "Failed to generate PDF" },
+      { status: 500 }
+    );
+  }
 }
