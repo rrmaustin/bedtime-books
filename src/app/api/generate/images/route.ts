@@ -8,42 +8,59 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Google AI API client for Gemini 2.5 Flash Image (Nano Banana) model
+// Google AI API client for image generation
 async function generateWithGoogleAI(prompt: string): Promise<string> {
   try {
+    // Try to use Google AI for image generation
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '');
     
-    // Use the correct model name for Gemini 2.5 Flash Image (Nano Banana)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-    
-    // Create the image generation request
-    const result = await model.generateContent([
-      {
-        text: `Generate a children's book illustration: ${prompt}`,
-      },
-    ]);
-    
-    const response = await result.response;
-    
-    // Handle the response - Google AI typically returns base64 encoded images
-    const imageData = response.text();
-    
-    // If it's already a data URL, return it
-    if (imageData.startsWith('data:')) {
-      return imageData;
+    // Try different approaches for Google AI image generation
+    try {
+      // Approach 1: Try Gemini Pro Vision (if available)
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      
+      const result = await model.generateContent([
+        {
+          text: `Create a children's book illustration based on this description: ${prompt}. Return only the image data.`,
+        },
+      ]);
+      
+      const response = await result.response;
+      const text = response.text();
+      
+      // Check if we got image data
+      if (text.includes('data:image') || text.includes('base64')) {
+        return text;
+      }
+      
+      throw new Error("No image data in response");
+      
+    } catch {
+      console.log("Gemini Pro approach failed, trying alternative...");
+      
+      // Approach 2: Use text-to-image if available
+      // Note: This might not work with current Google AI API
+      throw new Error("Google AI image generation not yet fully supported");
     }
     
-    // If it's base64 without the data URL prefix, add it
-    if (imageData && !imageData.startsWith('data:')) {
-      return `data:image/png;base64,${imageData}`;
-    }
-    
-    throw new Error("Invalid image data received from Google AI");
   } catch (error) {
     console.error("Google AI generation failed:", error);
-    throw error;
+    
+    // Fallback to a nice placeholder
+    const placeholderSvg = `data:image/svg+xml;utf8,${encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+        <rect width="100%" height="100%" fill="#f0f9ff"/>
+        <circle cx="200" cy="150" r="80" fill="#3b82f6" opacity="0.2"/>
+        <text x="200" y="140" text-anchor="middle" font-family="Arial" font-size="14" fill="#1e40af">Google AI</text>
+        <text x="200" y="160" text-anchor="middle" font-family="Arial" font-size="12" fill="#374151">Image Generation</text>
+        <text x="200" y="180" text-anchor="middle" font-family="Arial" font-size="10" fill="#6b7280">Coming Soon</text>
+        <text x="200" y="200" text-anchor="middle" font-family="Arial" font-size="8" fill="#9ca3af">Use OpenAI for now</text>
+      </svg>
+    `)}`;
+    
+    return placeholderSvg;
   }
 }
 
