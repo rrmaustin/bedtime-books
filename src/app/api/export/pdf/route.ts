@@ -27,6 +27,22 @@ export async function POST(req: NextRequest) {
       pagesCount: pages?.length,
       firstPageImageUrl: pages?.[0]?.imageUrl?.substring(0, 100) + "..."
     });
+    
+    // Check if we have any valid images
+    const validImages = pages?.filter(p => {
+      const url = (p as { imageUrl?: string })?.imageUrl;
+      return url && !url.includes("Image failed to generate");
+    }) || [];
+    
+    console.log(`Found ${validImages.length} valid images out of ${pages?.length} pages`);
+    
+    if (validImages.length === 0) {
+      console.error("No valid images found for PDF generation");
+      return NextResponse.json(
+        { error: "No valid images available for PDF generation" },
+        { status: 400 }
+      );
+    }
 
   const doc = new PDFDocument({ size: "LETTER", margin: 36 });
   const stream = doc as unknown as NodeJS.ReadableStream;
@@ -54,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     const url = (p as { imageUrl?: string })?.imageUrl;
     console.log(`Processing image for page ${i + 1}:`, url?.substring(0, 100) + "...");
-    if (url) {
+    if (url && url !== "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22400%22%20height%3D%22300%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22/%3E%3Ctext%20x%3D%22200%22%20y%3D%22150%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%22%20font-size%3D%2216%22%20fill%3D%22%236b7280%22%3EImage%20failed%20to%20generate%3C/text%3E%3C/svg%3E") {
       try {
         if (url.startsWith("data:image/png;base64,") || url.startsWith("data:image/jpeg;base64,")) {
           // draw from base64

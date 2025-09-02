@@ -69,9 +69,33 @@ async function generateWithGoogleAI(prompt: string): Promise<string> {
             return `data:${mimeType};base64,${base64Data}`;
           }
           
-          // Check if it's a text response with image data
-          if (part.text && (part.text.includes('data:image') || part.text.includes('base64'))) {
-            return part.text;
+          // Check if it's a text response with JSON containing base64 data
+          if (part.text) {
+            console.log("Processing text response:", part.text.substring(0, 200) + "...");
+            
+            // Try to extract JSON from the response
+            try {
+              // Look for JSON content between ```json and ```
+              const jsonMatch = part.text.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+              if (jsonMatch) {
+                const jsonData = JSON.parse(jsonMatch[1]);
+                console.log("Extracted JSON keys:", Object.keys(jsonData));
+                
+                // Check for different possible base64 field names
+                const base64Data = jsonData.b64_json || jsonData.image_base64 || jsonData.base64 || jsonData.data;
+                if (base64Data) {
+                  console.log("Found base64 data, length:", base64Data.length);
+                  return `data:image/png;base64,${base64Data}`;
+                }
+              }
+            } catch (jsonError) {
+              console.log("JSON parsing failed:", jsonError);
+            }
+            
+            // Fallback: check if it's a direct data URL
+            if (part.text.includes('data:image') || part.text.includes('base64')) {
+              return part.text;
+            }
           }
         }
       }
@@ -163,19 +187,24 @@ export async function POST(req: NextRequest) {
             console.log(`❌ Google AI failed for page ${i + 1}, falling back to OpenAI:`, googleError);
             // Fallback to OpenAI
             console.log(`Attempting OpenAI fallback for page ${i + 1}...`);
-            const response = await openai.images.generate({
-              model: "dall-e-3",
-              prompt,
-              n: 1,
-              size: "1024x1024",
-              response_format: "url",
-            });
+            try {
+              const response = await openai.images.generate({
+                model: "dall-e-3",
+                prompt,
+                n: 1,
+                size: "1024x1024",
+                response_format: "url",
+              });
 
-            if (response.data && response.data[0]?.url) {
-              imageUrl = response.data[0].url;
-              console.log(`✅ OpenAI fallback generated image for page ${i + 1}:`, imageUrl.substring(0, 100) + "...");
-            } else {
-              throw new Error("No image URL returned from OpenAI fallback");
+              if (response.data && response.data[0]?.url) {
+                imageUrl = response.data[0].url;
+                console.log(`✅ OpenAI fallback generated image for page ${i + 1}:`, imageUrl.substring(0, 100) + "...");
+              } else {
+                throw new Error("No image URL returned from OpenAI fallback");
+              }
+            } catch (openaiError) {
+              console.error(`❌ OpenAI fallback also failed for page ${i + 1}:`, openaiError);
+              throw openaiError; // Re-throw to trigger placeholder
             }
           }
         } else {
