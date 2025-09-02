@@ -8,16 +8,77 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Google AI API client for image generation using Imagen
+// Google AI API client for image generation using Gemini 2.5 Flash
 async function generateWithGoogleAI(prompt: string): Promise<string> {
   try {
     console.log("Attempting Google AI image generation with prompt:", prompt);
     
-    // Use Google's Imagen model for actual image generation
-    const imageResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0:generateContent', {
+    // Get environment variables
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_API_KEY;
+    const projectId = process.env.GCP_PROJECT_ID;
+    const location = process.env.GCP_LOCATION || "us-central1";
+    
+    if (!apiKey) {
+      throw new Error("Google AI API key not found in environment variables");
+    }
+    
+    console.log("Using API key:", apiKey ? "Found" : "Missing");
+    console.log("Project ID:", projectId || "Not set");
+    console.log("Location:", location);
+    
+    // Try the Vertex AI endpoint first (if project ID is available)
+    if (projectId) {
+      console.log("Trying Vertex AI endpoint...");
+      const vertexEndpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.5-flash:predict?key=${apiKey}`;
+      
+      const vertexResponse = await fetch(vertexEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          instances: [
+            {
+              prompt: `Create a beautiful children's book illustration: ${prompt}. Style: warm, colorful, child-friendly, bedtime story illustration.`
+            }
+          ],
+          parameters: {
+            num_images: 1,
+            height: 1024,
+            width: 1024,
+            seed: Math.floor(Math.random() * 1000),
+          }
+        })
+      });
+      
+      console.log("Vertex AI response status:", vertexResponse.status);
+      
+      if (vertexResponse.ok) {
+        const vertexData = await vertexResponse.json();
+        console.log("Vertex AI response data:", JSON.stringify(vertexData, null, 2));
+        
+        // Extract image data from Vertex AI response
+        if (vertexData.predictions && vertexData.predictions.length > 0) {
+          const prediction = vertexData.predictions[0];
+          if (prediction.image_url) {
+            return prediction.image_url;
+          }
+          if (prediction.image_data) {
+            return `data:image/png;base64,${prediction.image_data}`;
+          }
+        }
+      } else {
+        const errorText = await vertexResponse.text();
+        console.error("Vertex AI API error:", errorText);
+      }
+    }
+    
+    // Fallback to direct Gemini API
+    console.log("Trying direct Gemini API...");
+    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
       method: 'POST',
       headers: {
-        'x-goog-api-key': process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '',
+        'x-goog-api-key': apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -25,7 +86,7 @@ async function generateWithGoogleAI(prompt: string): Promise<string> {
           {
             parts: [
               {
-                text: `Create a beautiful children's book illustration: ${prompt}. Style: warm, colorful, child-friendly, bedtime story illustration.`
+                text: `Generate a children's book illustration: ${prompt}. Return the image as base64 data.`
               }
             ]
           }
@@ -39,14 +100,14 @@ async function generateWithGoogleAI(prompt: string): Promise<string> {
       })
     });
     
-    console.log("Google AI response status:", imageResponse.status);
+    console.log("Gemini API response status:", geminiResponse.status);
     
-    if (imageResponse.ok) {
-      const imageData = await imageResponse.json();
-      console.log("Google AI response data:", JSON.stringify(imageData, null, 2));
+    if (geminiResponse.ok) {
+      const geminiData = await geminiResponse.json();
+      console.log("Gemini API response data:", JSON.stringify(geminiData, null, 2));
       
       // Check for image data in the response
-      const candidates = imageData.candidates;
+      const candidates = geminiData.candidates;
       if (candidates && candidates.length > 0) {
         const parts = candidates[0].content?.parts;
         if (parts && parts.length > 0) {
@@ -66,38 +127,8 @@ async function generateWithGoogleAI(prompt: string): Promise<string> {
         }
       }
     } else {
-      const errorText = await imageResponse.text();
-      console.error("Google AI API error:", errorText);
-    }
-    
-    // If Imagen doesn't work, try Gemini with a different approach
-    console.log("Trying Gemini text-to-image approach...");
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent', {
-      method: 'POST',
-      headers: {
-        'x-goog-api-key': process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: `Generate a children's book illustration as a base64 encoded image: ${prompt}`
-              }
-            ]
-          }
-        ]
-      })
-    });
-    
-    if (geminiResponse.ok) {
-      const geminiData = await geminiResponse.json();
-      const content = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (content && (content.includes('data:image') || content.includes('base64'))) {
-        return content;
-      }
+      const errorText = await geminiResponse.text();
+      console.error("Gemini API error:", errorText);
     }
     
     throw new Error("No image data received from Google AI");

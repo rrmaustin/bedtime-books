@@ -16,7 +16,7 @@ const STYLE_OPTIONS = [
 
 const AI_MODEL_OPTIONS = [
   { value: "openai-dalle3", label: "OpenAI DALL-E 3", description: "High quality, detailed images" },
-  { value: "google-nano-banana", label: "Google Imagen", description: "Fast, cost-effective images" },
+  { value: "google-nano-banana", label: "Google Gemini 2.5 Flash", description: "Fast, cost-effective images" },
 ] as const;
 
 const TOPIC_SUGGESTIONS = [
@@ -228,7 +228,7 @@ export default function StoryForm() {
               <div className="flex items-center">
                 <span className="text-blue-600 mr-2">🚀</span>
                 <div className="text-sm text-blue-800">
-                  <strong>Google Imagen:</strong> Fast image generation with Google&apos;s Imagen model.
+                  <strong>Google Gemini 2.5 Flash:</strong> Fast image generation with Gemini 2.5 Flash model.
                 </div>
               </div>
             </div>
